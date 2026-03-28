@@ -43,7 +43,7 @@ class LogisticRegression():
         self.w = None
     
     def _sigmoid(self, z):
-        return 1/(1+np.exp(-z))
+        return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (1 + np.exp(z)))
     
     def fit(self, X, y):
         m, n_features = X.shape
