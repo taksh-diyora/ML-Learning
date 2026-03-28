@@ -3,3 +3,4 @@ data/
 image
 hehe_compare.ipynb
 mypractice.py
+__pycache__/

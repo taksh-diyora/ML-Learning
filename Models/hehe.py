@@ -33,3 +33,39 @@ class LinearRegression():
         ss_tot = np.sum((y - np.mean(y))**2)
 
         return 1 - ss_res/ss_tot
+
+class LogisticRegression():
+    def __init__(self, alpha=0.01, n_iterations=10000, lambda_=0):
+        self.alpha = alpha
+        self.n_iterations = n_iterations
+        self.lambda_ = lambda_
+        self.b = None
+        self.w = None
+    
+    def _sigmoid(self, z):
+        return 1/(1+np.exp(-z))
+    
+    def fit(self, X, y):
+        m, n_features = X.shape
+        self.b = 0
+        self.w = np.zeros(n_features)
+
+        for _ in range(self.n_iterations):
+            z = np.dot(X, self.w) + self.b
+            f_wb = self._sigmoid(z)
+            error = f_wb - y
+
+            dw = np.dot(X.T, error)/m + (self.lambda_/m) * self.w
+            db = np.sum(error)/m
+
+            self.w = self.w - self.alpha*dw
+            self.b = self.b - self.alpha*db
+
+    def predict(self, X):
+        z = np.dot(X, self.w) + self.b
+        f_wb = self._sigmoid(z)
+        return (f_wb >= 0.5).astype(int)
+    
+    def score(self, X, y):
+        predictions = self.predict(X)
+        return np.mean(predictions == y)
