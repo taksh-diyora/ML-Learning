@@ -1,71 +1,124 @@
 import numpy as np
 
 class LinearRegression():
-    def __init__(self, n_iterations = 10000, learning_rate = 0.01):
-        self.n_iterations = n_iterations
-        self.learning_rate = learning_rate
+    def __init__(self, n_iters=10000, alpha = 0.01):
+        self.n_iters = n_iters
+        self.alpha = alpha
         self.w = None
         self.b = None
-    
-    def fit(self, X, y):
-        n_samples = X.shape[0]
-        n_features = X.shape[1]
-        
-        self.w = np.zeros(n_features)
+        self.tolerance = 0.005
+
+    def _initialize_parameter(self, X):
+        self.w = np.zeros(X.shape[1])
         self.b = 0
-
-        for _ in range(self.n_iterations):
-            f_wb = np.dot(X, self.w) + self.b
-            error = f_wb - y
-
-            dw = np.dot(X.T, error) / n_samples
-            db = np.sum(error) / n_samples
-
-            self.w = self.w - self.learning_rate * dw
-            self.b = self.b - self.learning_rate * db
-
-    def predict(self, X):
+    
+    def _predict(self, X):
         return np.dot(X, self.w) + self.b
     
-    def score(self, X, y):
-        f_wb = self.predict(X)
-        ss_res = np.sum((y-f_wb)**2)
-        ss_tot = np.sum((y - np.mean(y))**2)
-
-        return 1 - ss_res/ss_tot
-
-class LogisticRegression():
-    def __init__(self, alpha=0.01, n_iterations=10000, lambda_=0):
-        self.alpha = alpha
-        self.n_iterations = n_iterations
-        self.lambda_ = lambda_
-        self.b = None
-        self.w = None
+    def _cost_function(self, error, m):
+        return np.sum((error)**2)/(m*2)
     
-    def _sigmoid(self, z):
-        return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (1 + np.exp(z)))
+    def _compute_gradient(self, X, error):
+        m = X.shape[0]
+        dj_dw = np.dot(X.T, error)/m
+        dj_db = np.sum(error)/m
+
+        return dj_dw, dj_db
     
-    def fit(self, X, y):
-        m, n_features = X.shape
-        self.b = 0
-        self.w = np.zeros(n_features)
+    def fit(self, X, y, verbose = False):
+        self.cost_history = []
+        self._initialize_parameter(X)
+        epsilon = 1e-8
+        for i in range(self.n_iters):
+            y_pred = self._predict(X)
+            error = y_pred - y
 
-        for _ in range(self.n_iterations):
-            z = np.dot(X, self.w) + self.b
-            f_wb = self._sigmoid(z)
-            error = f_wb - y
+            dj_dw, dj_db = self._compute_gradient(X, error)
 
-            dw = np.dot(X.T, error)/m + (self.lambda_/m) * self.w
-            db = np.sum(error)/m
+            self.w = self.w - self.alpha*dj_dw
+            self.b = self.b - self.alpha*dj_db
 
-            self.w = self.w - self.alpha*dw
-            self.b = self.b - self.alpha*db
+            y_pred_new = self._predict(X)
+            error_new = y_pred_new - y
+
+            cost = self._cost_function(error_new, X.shape[0])
+            if i>0 and abs(cost - self.cost_history[-1])/max(epsilon, self.cost_history[-1]) < self.tolerance:
+                print(f"Stopped at iteration {i}")
+                break
+            self.cost_history.append(cost)
+
+            if verbose == True and i % 100 == 0:
+                print(cost)
 
     def predict(self, X):
-        z = np.dot(X, self.w) + self.b
-        f_wb = self._sigmoid(z)
-        return (f_wb >= 0.5).astype(int)
+        return self._predict(X)
     
     def score(self, X, y):
-        predictions = self.predict(X)
-        return np.mean(predictions == y)
+        y_pred = self._predict(X)
+        sse = np.sum((y - y_pred)**2)
+        sst = np.sum((y - np.mean(y))**2)
+
+        return 1 - sse/(sst+1e-8)
+
+
+class LogisticRegression():
+    def __init__(self, n_iters=10000, alpha = 0.01):
+        self.n_iters = n_iters
+        self.alpha = alpha
+        self.w = None
+        self.b = None
+        self.tolerance = 0.005
+
+    def _sigmoid(self, z):
+        return 1/(1+np.exp(-np.clip(z, -500, 500)))
+
+    def _initialize_parameter(self, X):
+        self.w = np.zeros(X.shape[1])
+        self.b = 0
+    
+    def _predict(self, X):
+        return self._sigmoid(np.dot(X, self.w) + self.b)
+    
+    def _cost_function(self, y, y_pred):
+        m = y.shape[0]
+        epsilon = 1e-8
+        return -np.sum(y*np.log(y_pred+epsilon) + (1-y)*np.log(1-y_pred+epsilon)) / m
+    
+    def _compute_gradient(self, X, error):
+        m = X.shape[0]
+        dj_dw = np.dot(X.T, error)/m
+        dj_db = np.sum(error)/m
+
+        return dj_dw, dj_db
+    
+    def fit(self, X, y, verbose = False):
+        self.cost_history = []
+        self._initialize_parameter(X)
+        epsilon = 1e-8
+        for i in range(self.n_iters):
+            y_pred = self._predict(X)
+            error = y_pred - y
+
+            dj_dw, dj_db = self._compute_gradient(X, error)
+
+            self.w = self.w - self.alpha*dj_dw
+            self.b = self.b - self.alpha*dj_db
+
+            y_pred_new = self._predict(X)
+
+            cost = self._cost_function(y, y_pred_new)
+            if i>0 and abs(cost - self.cost_history[-1])/max(epsilon, self.cost_history[-1]) < self.tolerance:
+                print(f"Stopped at iteration {i}")
+                break
+            self.cost_history.append(cost)
+
+            if verbose == True and i % 100 == 0:
+                print(cost)
+
+    def predict(self, X):
+        probs = self._predict(X)
+        return (probs >= 0.5).astype(int)
+    
+    def score(self, X, y):
+        y_pred = self.predict(X)
+        return np.mean(y_pred == y)
