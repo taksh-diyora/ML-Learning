@@ -35,7 +35,7 @@ Sigmoid + binary cross-entropy classifier for binary classification.
 ## Usage
 
 ```python
-from Models.models import LinearRegression, LogisticRegression
+from Models.hehe import LinearRegression, LogisticRegression
 import numpy as np
 
 # Linear Regression
